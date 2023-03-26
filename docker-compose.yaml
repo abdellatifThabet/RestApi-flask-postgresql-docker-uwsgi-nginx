@@ -1,0 +1,45 @@
+version: "3.9"
+services:
+  db:
+    image: kartoza/postgis:13.0
+    restart: always
+    ports:
+      - "54326:5432"
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASS: root
+      POSTGRES_DB: books_management
+      POSTGRES_MULTIPLE_EXTENSIONS: postgis,hstore,postgis_topology,postgis_raster,pgrouting,fuzzystrmatch
+    volumes:
+      - db_volume:/var/lib/postgresql
+  python-api:
+    depends_on:
+      - db
+    build: .
+    shm_size: 256m
+    # expose:
+    #   - 5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app/python-api
+      - api_data:/tmp/
+    environment:
+      FLASK_ENV: development
+      DATABASE_URL: postgresql://root:root@db:5432/books_management
+      API_KEY: 'change-me'
+      SECRET_KEY: 'bad-secret-key'
+  nginx:
+    build: ./nginx
+    container_name: nginx-flask
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - api_data:/tmp/
+    depends_on:
+      - python-api
+volumes:
+  db_volume:
+  api_data:
+
